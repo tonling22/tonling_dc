@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Dcard 教授文章搜尋</title>
+</head>
+<body>
+    <h1>🔍 教授文章搜尋</h1>
+    <form action="/search" method="post">
+        <label for="department">請輸入系名：</label>
+        <input type="text" id="department" name="department" required>
+        <button type="submit">搜尋</button>
+    </form>
+
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+
+    {% if results %}
+        <h2>搜尋結果：</h2>
+        <ul>
+            {% for item in results %}
+                <li><a href="{{ item.url }}" target="_blank">{{ item.title }}</a></li>
+            {% endfor %}
+        </ul>
+    {% elif department %}
+        <p>查無結果。</p>
+    {% endif %}
+</body>
+</html>
