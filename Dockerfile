@@ -20,4 +20,4 @@ COPY . /app
 WORKDIR /app
 
 # 預設啟動指令（視你的 app.py 而定）
-CMD ["python", "app.py"]
+CMD ["python", "linebot_app.py"]
