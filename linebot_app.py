@@ -5,9 +5,17 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from scudcard import dcard_search_selenium
+import logging
 
 app = Flask(__name__)
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+app.logger.setLevel(logging.INFO)
+
+# 設定 LINE Bot 的 Channel Access Token 和 Channel Secret
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "YOUR_ACCESS_TOKEN")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "YOUR_CHANNEL_SECRET")
 
@@ -24,16 +32,16 @@ def web_search():
     results = []
     error = None
     department = request.form.get('department', '')
-    print("使用者輸入查詢:", department)
+    app.logger.info("使用者輸入查詢: %s", department, '').strip()
 
     if department:
         try:
             results = dcard_search_selenium(department + " 東吳 老師")
-            print("找到文章數:", len(results))
+            app.logger.info("找到文章數: %d", len(results))
         except Exception as e:
             import traceback
-            print("Web 搜尋錯誤:", e)
-            print(traceback.format_exc())
+            app.logger.error("搜尋錯誤: %s", str(e))
+            app.logger.error(traceback.format_exc())
             error = "搜尋時發生錯誤，請稍後再試。"
 
     return render_template('index.html', results=results, error=error, department=department)
