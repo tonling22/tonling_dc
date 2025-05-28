@@ -32,7 +32,7 @@ def web_search():
     results = []
     error = None
     department = request.form.get('department', '')
-    app.logger.info("使用者輸入查詢: %s", department, '').strip()
+    app.logger.info("使用者輸入查詢: %s", department)
 
     if department:
         try:
