@@ -1,4 +1,4 @@
-def dcard_search_selenium(query):
+def google_search_dcard(query):
     import platform
     import os
     import time
@@ -38,49 +38,41 @@ def dcard_search_selenium(query):
         logging.error(f"Chrome 啟動失敗: {e}")
         return []
 
-    url = f"https://www.dcard.tw/search?query={query}"
-    logging.info(f"前往 Dcard 搜尋頁: {url}")
-    driver.get(url)
+    # 使用 site:dcard.tw 限定搜尋範圍到 Dcard
+    google_query = f"site:dcard.tw {query}"
+    search_url = f"https://www.google.com/search?q={google_query}"
+    logging.info(f"前往 Google 搜尋頁: {search_url}")
+    driver.get(search_url)
 
     try:
         WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href*="/p/"]'))
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'div.g'))
         )
     except Exception as e:
-        logging.warning(f"等待文章載入超時: {e}")
+        logging.warning(f"等待搜尋結果超時: {e}")
         driver.quit()
         return []
 
-    SCROLL_PAUSE_TIME = 2
-    MAX_SCROLLS = 8
-    last_height = driver.execute_script("return document.body.scrollHeight")
+    time.sleep(2)
 
-    for _ in range(MAX_SCROLLS):
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(SCROLL_PAUSE_TIME)
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            break
-        last_height = new_height
-
-    # 僅選取文章連結
-    links = driver.find_elements(By.CSS_SELECTOR, 'a[href*="/p/"]')
+    # 取得搜尋結果連結與標題
     results = []
     seen = set()
 
+    # Google 結果通常放在 a 標籤內（有可能在 <h3> 下的 <a>）
+    links = driver.find_elements(By.CSS_SELECTOR, 'a')
     for link in links:
         href = link.get_attribute('href')
-        if href and href not in seen:
+        if href and "dcard.tw" in href and href not in seen:
             try:
-                # 取得文章標題 (Dcard 網站使用 span 或 h2，可根據情況調整)
                 title = link.text.strip()
                 if not title:
-                    title = link.get_attribute("title") or "無標題"
+                    continue
                 results.append({"title": title, "url": href})
                 seen.add(href)
             except Exception as e:
-                logging.warning(f"解析文章失敗: {e}")
+                logging.warning(f"解析搜尋結果失敗: {e}")
 
     driver.quit()
-    logging.info(f"共找到 {len(results)} 筆文章")
+    logging.info(f"共找到 {len(results)} 筆 Dcard 文章")
     return results

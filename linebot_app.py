@@ -4,7 +4,7 @@ from flask import Flask, request, abort, render_template
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from scudcard import dcard_search_selenium
+from scudcard import google_search_dcard
 import logging
 
 app = Flask(__name__)
@@ -36,7 +36,7 @@ def web_search():
 
     if department:
         try:
-            results = dcard_search_selenium(department + " 東吳 老師")
+            results = google_search_dcard(department + " site:dcard.tw")
             app.logger.info("找到文章數: %d", len(results))
         except Exception as e:
             import traceback
@@ -68,7 +68,7 @@ def callback():
 def handle_message(event):
     user_input = event.message.text
     try:
-        results = dcard_search_selenium(user_input)
+        results = google_search_dcard(user_input + " site:dcard.tw")
     except Exception as e:
         results = []
         print("LINE Bot 搜尋錯誤:", e)
