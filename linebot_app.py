@@ -76,7 +76,10 @@ def handle_message(event):
     if not results:
         reply = "找不到相關文章。"
     else:
-        reply = "\n\n".join([f"{i+1}. {r['title']}\n🔗 {r['url']}" for i, r in enumerate(results[:5])])
+        reply = "\n\n".join([
+            f"{i+1}. {r['title']}\n📄 {r.get('description', '無摘要')}\n🔗 {r['url']}"
+            for i, r in enumerate(results[:5])
+        ])
 
     line_bot_api.reply_message(
         event.reply_token,

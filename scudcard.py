@@ -6,6 +6,7 @@ def google_search_dcard(query):
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.chrome.service import Service
     import undetected_chromedriver as uc
 
     def get_chrome_path():
@@ -38,7 +39,6 @@ def google_search_dcard(query):
         logging.error(f"Chrome 啟動失敗: {e}")
         return []
 
-    # 使用 site:dcard.tw 限定搜尋範圍到 Dcard
     google_query = f"site:dcard.tw {query}"
     search_url = f"https://www.google.com/search?q={google_query}"
     logging.info(f"前往 Google 搜尋頁: {search_url}")
@@ -55,23 +55,35 @@ def google_search_dcard(query):
 
     time.sleep(2)
 
-    # 取得搜尋結果連結與標題
     results = []
     seen = set()
 
-    # Google 結果通常放在 a 標籤內（有可能在 <h3> 下的 <a>）
-    links = driver.find_elements(By.CSS_SELECTOR, 'a')
-    for link in links:
-        href = link.get_attribute('href')
-        if href and "dcard.tw" in href and href not in seen:
+    search_results = driver.find_elements(By.CSS_SELECTOR, 'div.g')
+    for result in search_results:
+        try:
+            link_elem = result.find_element(By.CSS_SELECTOR, 'a')
+            href = link_elem.get_attribute('href')
+
+            if not href or "dcard.tw" not in href or href in seen:
+                continue
+
+            title_elem = result.find_element(By.CSS_SELECTOR, 'h3')
+            title = title_elem.text.strip() if title_elem else "無標題"
+
             try:
-                title = link.text.strip()
-                if not title:
-                    continue
-                results.append({"title": title, "url": href})
-                seen.add(href)
-            except Exception as e:
-                logging.warning(f"解析搜尋結果失敗: {e}")
+                desc_elem = result.find_element(By.CSS_SELECTOR, 'div.VwiC3b')  # Google 摘要內容 class
+                description = desc_elem.text.strip()
+            except:
+                description = "無摘要"
+
+            results.append({
+                "title": title,
+                "url": href,
+                "description": description
+            })
+            seen.add(href)
+        except Exception as e:
+            logging.warning(f"解析搜尋結果失敗: {e}")
 
     driver.quit()
     logging.info(f"共找到 {len(results)} 筆 Dcard 文章")
