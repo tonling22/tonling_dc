@@ -1,90 +1,38 @@
-def google_search_dcard(query):
-    import platform
-    import os
-    import time
-    import logging
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.chrome.service import Service
-    import undetected_chromedriver as uc
+import requests
+from bs4 import BeautifulSoup
+import urllib.parse
 
-    def get_chrome_path():
-        system = platform.system()
-        if system == "Windows":
-            possible_paths = [
-                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-            ]
-            for path in possible_paths:
-                if os.path.exists(path):
-                    return path
-            raise FileNotFoundError("找不到 Chrome 執行檔")
-        elif system == "Linux":
-            return "/usr/bin/google-chrome"
-        else:
-            raise NotImplementedError(f"不支援的系統: {system}")
+def google_search_dcard(department):
+    """
+    使用 DuckDuckGo 搜尋 '東吳 {department} 老師 site:dcard.tw'，回傳前三筆結果
+    每筆結果包含 title, url, description (簡短摘要)
+    """
 
-    chrome_path = get_chrome_path()
-    options = uc.ChromeOptions()
-    options.binary_location = chrome_path
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--log-level=3')
+    query = f"東吳 {department} 老師 site:dcard.tw"
+    query_enc = urllib.parse.quote(query)
+    url = f"https://html.duckduckgo.com/html/?q={query_enc}"
 
-    try:
-        driver = uc.Chrome(options=options)
-    except Exception as e:
-        logging.error(f"Chrome 啟動失敗: {e}")
-        return []
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
 
-    google_query = f"site:dcard.tw {query}"
-    search_url = f"https://www.google.com/search?q={google_query}"
-    logging.info(f"前往 Google 搜尋頁: {search_url}")
-    driver.get(search_url)
-
-    try:
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, 'div.g'))
-        )
-    except Exception as e:
-        logging.warning(f"等待搜尋結果超時: {e}")
-        driver.quit()
-        return []
-
-    time.sleep(2)
+    res = requests.get(url, headers=headers)
+    res.raise_for_status()
+    soup = BeautifulSoup(res.text, "html.parser")
 
     results = []
-    seen = set()
+    for result in soup.select('.result')[:3]:
+        title_tag = result.select_one('.result__a')
+        desc_tag = result.select_one('.result__snippet')
 
-    search_results = driver.find_elements(By.CSS_SELECTOR, 'div.g')
-    for result in search_results:
-        try:
-            link_elem = result.find_element(By.CSS_SELECTOR, 'a')
-            href = link_elem.get_attribute('href')
+        title = title_tag.text if title_tag else "無標題"
+        url = title_tag['href'] if title_tag and 'href' in title_tag.attrs else ""
+        description = desc_tag.text if desc_tag else "無摘要"
 
-            if not href or "dcard.tw" not in href or href in seen:
-                continue
+        results.append({
+            "title": title,
+            "url": url,
+            "description": description
+        })
 
-            title_elem = result.find_element(By.CSS_SELECTOR, 'h3')
-            title = title_elem.text.strip() if title_elem else "無標題"
-
-            try:
-                desc_elem = result.find_element(By.CSS_SELECTOR, 'div.VwiC3b')  # Google 摘要內容 class
-                description = desc_elem.text.strip()
-            except:
-                description = "無摘要"
-
-            results.append({
-                "title": title,
-                "url": href,
-                "description": description
-            })
-            seen.add(href)
-        except Exception as e:
-            logging.warning(f"解析搜尋結果失敗: {e}")
-
-    driver.quit()
-    logging.info(f"共找到 {len(results)} 筆 Dcard 文章")
     return results

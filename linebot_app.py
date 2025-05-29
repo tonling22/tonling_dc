@@ -1,4 +1,3 @@
-# linebot_app.py
 import os
 from flask import Flask, request, abort, render_template
 from linebot import LineBotApi, WebhookHandler
@@ -31,12 +30,12 @@ def web_index():
 def web_search():
     results = []
     error = None
-    department = request.form.get('department', '')
+    department = request.form.get('department', '').strip()
     app.logger.info("使用者輸入查詢: %s", department)
 
     if department:
         try:
-            results = google_search_dcard(department + " site:dcard.tw")
+            results = google_search_dcard(department)
             app.logger.info("找到文章數: %d", len(results))
         except Exception as e:
             import traceback
@@ -66,20 +65,23 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    user_input = event.message.text
-    try:
-        results = google_search_dcard(user_input + " site:dcard.tw")
-    except Exception as e:
-        results = []
-        print("LINE Bot 搜尋錯誤:", e)
-
-    if not results:
-        reply = "找不到相關文章。"
+    user_input = event.message.text.strip()
+    if not user_input:
+        reply = "請輸入科系名稱。"
     else:
-        reply = "\n\n".join([
-            f"{i+1}. {r['title']}\n📄 {r.get('description', '無摘要')}\n🔗 {r['url']}"
-            for i, r in enumerate(results[:5])
-        ])
+        try:
+            results = google_search_dcard(user_input)
+        except Exception as e:
+            results = []
+            print("LINE Bot 搜尋錯誤:", e)
+
+        if not results:
+            reply = "找不到相關文章。"
+        else:
+            reply = "\n\n".join([
+                f"{i+1}. {r['title']}\n📄 {r['description']}\n🔗 {r['url']}"
+                for i, r in enumerate(results)
+            ])
 
     line_bot_api.reply_message(
         event.reply_token,

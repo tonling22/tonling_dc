@@ -1,6 +1,4 @@
-flask==2.3.3
-selenium==4.20.0
-line-bot-sdk==3.5.0
-webdriver-manager==4.0.1
+Flask==2.2.3
+line-bot-sdk==2.24.1
 requests==2.31.0
-undetected-chromedriver==3.5.4
+beautifulsoup4==4.12.2
